@@ -1,27 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-     <loc>None</loc>
+     <loc>https://journeytonewland.github.io/me/</loc>
      <lastmod>2018-10-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>None</loc>
+     <loc>https://journeytonewland.github.io/me/manager/team/</loc>
      <lastmod>2018-10-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>None</loc>
+     <loc>https://journeytonewland.github.io/me/it/it/</loc>
      <lastmod>2018-10-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>None</loc>
+     <loc>https://journeytonewland.github.io/me/manager/szbf/</loc>
      <lastmod>2018-10-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
     <url>
-     <loc>None</loc>
+     <loc>https://journeytonewland.github.io/me/manager/Principles/</loc>
+     <lastmod>2018-10-29</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>https://journeytonewland.github.io/me/learning/OKR/</loc>
+     <lastmod>2018-10-29</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    <url>
+     <loc>https://journeytonewland.github.io/me/it/da/</loc>
      <lastmod>2018-10-29</lastmod>
      <changefreq>daily</changefreq>
     </url>
