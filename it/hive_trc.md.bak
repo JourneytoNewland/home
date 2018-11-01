@@ -1,0 +1,57 @@
+### 构建环境
+#### 构建测试表
+```sql
+drop table n_qzl_trans_row_column;
+create table n_qzl_trans_row_column(
+  name string,
+  course string
+)
+row format delimited fields terminated by ',' stored as textfile;
+```
+#### 构建测试数据
+
+```sql
+insert into n_qzl_trans_row_column values('aaa','11');
+insert into n_qzl_trans_row_column values('aaa','22');
+insert into n_qzl_trans_row_column values('aaa','33');
+insert into n_qzl_trans_row_column values('bbb','22');
+insert into n_qzl_trans_row_column values('bbb','33');
+```
+
+### 行转列
+```sql
+select name, 
+       concat_ws(',', collect_set(course)) as course_name
+  from n_qzl_trans_row_column
+ group by name;
+```
+
+```
++-------+--------------+--+
+| name  | course_name  |
++-------+--------------+--+
+| aaa   | 11,33,22     |
+| bbb   | 33,22        |
++-------+--------------+--+
+```
+```sql
+insert into n_qzl_trans_row_column values('eee','11_22_33');
+```
+
+### 列转行
+```sql
+select name, course, course_new
+  from n_qzl_trans_row_column
+   lateral view explode(split(course, '_')) num as course_new
+ where name = 'eee';
+```
+
+```
++-------+-----------+-------------+--+
+| name  |  course   | course_new  |
++-------+-----------+-------------+--+
+| eee   | 11_22_33  | 11          |
+| eee   | 11_22_33  | 22          |
+| eee   | 11_22_33  | 33          |
++-------+-----------+-------------+--+
+```
