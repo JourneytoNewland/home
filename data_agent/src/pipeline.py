@@ -1,9 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Any
 
 from data_agent.src.auth import enforce_metric_access
 from data_agent.src.compiler import GenericSQLCompiler, with_trace_id
 from data_agent.src.semanticdb import SemanticDB
+from data_agent.src.validator import validate_logic_form
 
 
 @dataclass(frozen=True)
@@ -15,61 +16,36 @@ class QueryObject:
     start_date: str
     end_date: str
     dimensions: List[str] = field(default_factory=list)
+    unknown_terms: List[str] = field(default_factory=list)
 
 
 class NLStandardizer:
-    """Placeholder for LLM-based NL normalization.
-    Deterministic mapping for MVP tests.
-    """
-
     @staticmethod
     def normalize(raw_question: str) -> QueryObject:
         text = raw_question.strip()
+        unknown_terms: List[str] = []
+        if "GMV" in text.upper():
+            unknown_terms.append("GMV")
+
         if "利润" in text:
-            return QueryObject(
-                subject="sales_order",
-                metric="profit_amount",
-                aggregation="sum",
-                time_field="order_date",
-                start_date="2026-01-01",
-                end_date="2026-12-31",
-                dimensions=[],
-            )
+            return QueryObject("sales_order", "profit_amount", "sum", "order_date", "2026-01-01", "2026-12-31", [], unknown_terms)
         if "销售额" in text and "按省份" in text:
-            return QueryObject(
-                subject="sales_order",
-                metric="sales_amount",
-                aggregation="sum",
-                time_field="order_date",
-                start_date="2026-01-01",
-                end_date="2026-12-31",
-                dimensions=["province"],
-            )
-        return QueryObject(
-            subject="sales_order",
-            metric="sales_amount",
-            aggregation="sum",
-            time_field="order_date",
-            start_date="2026-01-01",
-            end_date="2026-12-31",
-            dimensions=[],
-        )
+            return QueryObject("sales_order", "sales_amount", "sum", "order_date", "2026-01-01", "2026-12-31", ["province"], unknown_terms)
+        return QueryObject("sales_order", "sales_amount", "sum", "order_date", "2026-01-01", "2026-12-31", [], unknown_terms)
 
 
 class DeterministicReasoner:
     @staticmethod
     def to_logic_form(q: QueryObject) -> Dict[str, Any]:
-        return {
+        lf = {
             "version": "1.0",
             "subject": q.subject,
             "metric": {"name": q.metric, "aggregation": q.aggregation, "filters": []},
             "dimensions": q.dimensions,
-            "time_range": {
-                "field": q.time_field,
-                "start": q.start_date,
-                "end": q.end_date,
-            },
+            "time_range": {"field": q.time_field, "start": q.start_date, "end": q.end_date},
         }
+        validate_logic_form(lf)
+        return lf
 
 
 class DataAgentPipeline:
@@ -80,8 +56,8 @@ class DataAgentPipeline:
     def run(self, raw_question: str, role: str = "analyst") -> Dict[str, Any]:
         q = NLStandardizer.normalize(raw_question)
         enforce_metric_access(self.semantic_db, role, q.metric)
-
         lf = DeterministicReasoner.to_logic_form(q)
+
         metric_def = self.semantic_db.metric(q.metric)
         table = self.semantic_db.table_for_subject(metric_def.subject)
         row_filter = self.semantic_db.role_row_filter(role)
@@ -89,8 +65,16 @@ class DataAgentPipeline:
         sql = self.compiler.compile(lf, table, metric_def.expression, row_filter)
         compiled = with_trace_id(sql, lf)
         return {
-            "query_object": q,
+            "query_object": asdict(q),
             "logic_form": lf,
             "trace_id": compiled["trace_id"],
             "sql": compiled["sql"],
+            "explain": {
+                "metric": q.metric,
+                "subject": q.subject,
+                "time_range": {"start": q.start_date, "end": q.end_date},
+                "role": role,
+                "row_filter": row_filter,
+                "unknown_terms": q.unknown_terms,
+            },
         }

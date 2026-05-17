@@ -1,6 +1,6 @@
 # Data Agent（NL2LF2SQL）实施骨架
 
-这是基于生产级路线的首版可执行实现骨架，目标是把“方案文档”推进到“可启动研发”的工程形态。
+这是基于生产级路线的可执行实现骨架，目标是把“方案文档”推进到“可启动研发”的工程形态。
 
 ## 目录
 - `docs/architecture.md`：架构与职责边界
@@ -10,15 +10,24 @@
 - `src/pipeline.py`：NL2LF2SQL 流水线最小可运行实现
 - `src/semanticdb.py`：语义配置加载与查询
 - `src/auth.py`：权限校验（默认拒绝）
-- `src/compiler.py`：SQL 编译接口与默认实现
-- `tests/test_pipeline.py`：一致性与权限行为测试
+- `src/compiler.py`：SQL 编译接口与多方言基础实现
+- `src/validator.py`：LogicForm 结构校验
+- `tests/test_pipeline.py`：一致性、权限、方言与未知词行为测试
 
 ## 快速运行
 ```bash
 python3 -m unittest discover -s data_agent/tests -p 'test_*.py'
 ```
 
-## 当前实现边界
-- 提供确定性管线框架与数据结构，不直接连接真实数据库。
-- 支持配置驱动的指标表达式、角色行过滤、默认拒绝权限策略。
-- 编译器已接口化，后续可扩展多方言实现（ClickHouse/MySQL/PostgreSQL）。
+## 已完成的升级项
+- 配置驱动语义层（metric/entity/policy）。
+- 默认拒绝权限中间件。
+- SQL 编译器接口化，内置 Generic/MySQL/PostgreSQL 编译器。
+- LogicForm 最小结构校验。
+- Explain 输出补充（口径、时间窗、角色、行过滤、未知词）。
+
+## 下一步建议升级
+- 接入真实 NL 服务（替换规则桩）。
+- Unknown term 二次确认流程（向量检索/交互澄清）。
+- 指标版本化与生效窗。
+- SQL 执行与审计回放 API。
