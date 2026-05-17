@@ -6,7 +6,19 @@
       "aggregation": "sum",
       "expression": "order_amount",
       "subject": "sales_order",
-      "version": "v1"
+      "version": "v1",
+      "effective_from": "2025-01-01",
+      "effective_to": "2026-06-30"
+    },
+    {
+      "name": "sales_amount",
+      "label": "销售额",
+      "aggregation": "sum",
+      "expression": "order_amount - discount_amount",
+      "subject": "sales_order",
+      "version": "v2",
+      "effective_from": "2026-07-01",
+      "effective_to": null
     },
     {
       "name": "profit_amount",
@@ -14,7 +26,9 @@
       "aggregation": "sum",
       "expression": "profit_amount",
       "subject": "sales_order",
-      "version": "v1"
+      "version": "v1",
+      "effective_from": "2025-01-01",
+      "effective_to": null
     }
   ],
   "entities": [

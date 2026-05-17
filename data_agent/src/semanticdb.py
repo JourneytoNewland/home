@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List
 import json
@@ -12,12 +13,15 @@ class MetricDef:
     aggregation: str
     expression: str
     subject: str
+    version: str
+    effective_from: str
+    effective_to: str | None
 
 
 class SemanticDB:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.metrics = {m["name"]: m for m in config.get("metrics", [])}
+        self.metrics = config.get("metrics", [])
         self.entities = {e["name"]: e for e in config.get("entities", [])}
         self.policies = config.get("policies", {"default_deny": True, "roles": {}})
 
@@ -37,13 +41,35 @@ class SemanticDB:
 
         raise ValueError(f"Unsupported config format: {suffix}")
 
-    def metric(self, metric_name: str) -> MetricDef:
-        metric = self.metrics[metric_name]
+    @staticmethod
+    def _parse_date(value: str) -> date:
+        return date.fromisoformat(value)
+
+    def metric(self, metric_name: str, as_of_date: str) -> MetricDef:
+        target = self._parse_date(as_of_date)
+        candidates = [m for m in self.metrics if m["name"] == metric_name]
+        if not candidates:
+            raise KeyError(f"Metric not found: {metric_name}")
+
+        matched = []
+        for metric in candidates:
+            start = self._parse_date(metric["effective_from"])
+            end = self._parse_date(metric["effective_to"]) if metric.get("effective_to") else None
+            if target >= start and (end is None or target <= end):
+                matched.append(metric)
+
+        if not matched:
+            raise KeyError(f"Metric {metric_name} has no effective version for {as_of_date}")
+
+        selected = sorted(matched, key=lambda x: x["effective_from"], reverse=True)[0]
         return MetricDef(
-            name=metric["name"],
-            aggregation=metric["aggregation"],
-            expression=metric["expression"],
-            subject=metric["subject"],
+            name=selected["name"],
+            aggregation=selected["aggregation"],
+            expression=selected["expression"],
+            subject=selected["subject"],
+            version=selected["version"],
+            effective_from=selected["effective_from"],
+            effective_to=selected.get("effective_to"),
         )
 
     def table_for_subject(self, subject: str) -> str:

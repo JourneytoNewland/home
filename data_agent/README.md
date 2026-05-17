@@ -25,6 +25,7 @@ python3 -m unittest discover -s data_agent/tests -p 'test_*.py'
 - SQL 编译器接口化，内置 Generic/MySQL/PostgreSQL 编译器。
 - LogicForm 最小结构校验。
 - Explain 输出补充（口径、时间窗、角色、行过滤、未知词）。
+- 指标版本与生效窗选择（as_of_date 解析）。
 
 ## 下一步建议升级
 - 接入真实 NL 服务（替换规则桩）。

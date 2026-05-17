@@ -44,6 +44,17 @@ class TestPipeline(unittest.TestCase):
         out = self.pipeline.run("今年GMV销售额", role="analyst")
         self.assertIn("GMV", out["explain"]["unknown_terms"])
 
+    def test_metric_version_selected(self):
+        out = self.pipeline.run("今年销售额", role="analyst")
+        self.assertEqual(out["explain"]["metric_version"], "v2")
+        self.assertIn("sum(order_amount - discount_amount)", out["sql"])
+
+    def test_metric_version_v1_selected_for_early_date(self):
+        db = SemanticDB.from_file("data_agent/configs/semanticdb.sample.json")
+        v1 = db.metric("sales_amount", as_of_date="2026-06-30")
+        self.assertEqual(v1.version, "v1")
+        self.assertEqual(v1.expression, "order_amount")
+
 
 if __name__ == "__main__":
     unittest.main()

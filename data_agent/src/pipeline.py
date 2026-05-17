@@ -58,7 +58,7 @@ class DataAgentPipeline:
         enforce_metric_access(self.semantic_db, role, q.metric)
         lf = DeterministicReasoner.to_logic_form(q)
 
-        metric_def = self.semantic_db.metric(q.metric)
+        metric_def = self.semantic_db.metric(q.metric, as_of_date=q.end_date)
         table = self.semantic_db.table_for_subject(metric_def.subject)
         row_filter = self.semantic_db.role_row_filter(role)
 
@@ -75,6 +75,9 @@ class DataAgentPipeline:
                 "time_range": {"start": q.start_date, "end": q.end_date},
                 "role": role,
                 "row_filter": row_filter,
+                "metric_version": metric_def.version,
+                "metric_effective_from": metric_def.effective_from,
+                "metric_effective_to": metric_def.effective_to,
                 "unknown_terms": q.unknown_terms,
             },
         }
