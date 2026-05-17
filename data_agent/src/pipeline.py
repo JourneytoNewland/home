@@ -3,6 +3,7 @@ from typing import Dict, List, Any
 
 from data_agent.src.auth import enforce_metric_access
 from data_agent.src.compiler import GenericSQLCompiler, with_trace_id
+from data_agent.src.executor import QueryExecutor, AuditLogger
 from data_agent.src.semanticdb import SemanticDB
 from data_agent.src.validator import validate_logic_form
 
@@ -49,9 +50,17 @@ class DeterministicReasoner:
 
 
 class DataAgentPipeline:
-    def __init__(self, semantic_db: SemanticDB, compiler: GenericSQLCompiler | None = None):
+    def __init__(
+        self,
+        semantic_db: SemanticDB,
+        compiler: GenericSQLCompiler | None = None,
+        executor: QueryExecutor | None = None,
+        audit_logger: AuditLogger | None = None,
+    ):
         self.semantic_db = semantic_db
         self.compiler = compiler or GenericSQLCompiler()
+        self.executor = executor or QueryExecutor(mode="dry_run")
+        self.audit_logger = audit_logger or AuditLogger()
 
     def run(self, raw_question: str, role: str = "analyst") -> Dict[str, Any]:
         q = NLStandardizer.normalize(raw_question)
@@ -64,20 +73,34 @@ class DataAgentPipeline:
 
         sql = self.compiler.compile(lf, table, metric_def.expression, row_filter)
         compiled = with_trace_id(sql, lf)
+        execution = self.executor.execute(compiled["sql"])
+
+        event = {
+            "trace_id": compiled["trace_id"],
+            "role": role,
+            "metric": q.metric,
+            "metric_version": metric_def.version,
+            "sql": compiled["sql"],
+            "execution_mode": execution["mode"],
+            "row_count": execution["row_count"],
+        }
+        self.audit_logger.log(event)
+
         return {
             "query_object": asdict(q),
             "logic_form": lf,
             "trace_id": compiled["trace_id"],
             "sql": compiled["sql"],
+            "execution": execution,
             "explain": {
                 "metric": q.metric,
                 "subject": q.subject,
                 "time_range": {"start": q.start_date, "end": q.end_date},
                 "role": role,
                 "row_filter": row_filter,
+                "unknown_terms": q.unknown_terms,
                 "metric_version": metric_def.version,
                 "metric_effective_from": metric_def.effective_from,
                 "metric_effective_to": metric_def.effective_to,
-                "unknown_terms": q.unknown_terms,
             },
         }
