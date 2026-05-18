@@ -7,6 +7,7 @@ from data_agent.src.executor import QueryExecutor, AuditLogger
 from data_agent.src.semanticdb import SemanticDB
 from data_agent.src.identity import UserContext
 from data_agent.src.validator import validate_logic_form
+from data_agent.src.unknown_terms import UnknownTermResolver
 
 
 @dataclass(frozen=True)
@@ -57,11 +58,13 @@ class DataAgentPipeline:
         compiler: GenericSQLCompiler | None = None,
         executor: QueryExecutor | None = None,
         audit_logger: AuditLogger | None = None,
+        unknown_term_resolver: UnknownTermResolver | None = None,
     ):
         self.semantic_db = semantic_db
         self.compiler = compiler or GenericSQLCompiler()
         self.executor = executor or QueryExecutor(mode="dry_run")
         self.audit_logger = audit_logger or AuditLogger()
+        self.unknown_term_resolver = unknown_term_resolver or UnknownTermResolver(vector_map={"GMV": ["sales_amount"]})
 
     def run(
         self,
@@ -73,6 +76,8 @@ class DataAgentPipeline:
         resolved_role = user_context.resolve_role(role) if user_context else (role or "analyst")
         enforce_metric_access(self.semantic_db, resolved_role, q.metric)
         lf = DeterministicReasoner.to_logic_form(q)
+
+        unknown_resolution = self.unknown_term_resolver.resolve(q.unknown_terms)
 
         metric_def = self.semantic_db.metric(q.metric, as_of_date=q.end_date)
         table = self.semantic_db.table_for_subject(metric_def.subject)
@@ -108,6 +113,7 @@ class DataAgentPipeline:
                 "role": resolved_role,
                 "row_filter": row_filter,
                 "unknown_terms": q.unknown_terms,
+                "unknown_resolution": unknown_resolution,
                 "metric_version": metric_def.version,
                 "metric_effective_from": metric_def.effective_from,
                 "metric_effective_to": metric_def.effective_to,

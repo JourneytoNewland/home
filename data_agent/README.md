@@ -13,7 +13,8 @@
 - `src/compiler.py`：SQL 编译接口与多方言基础实现
 - `src/validator.py`：LogicForm 结构校验
 - `src/executor.py`：只读执行器（dry_run/sqlite_readonly）与审计日志
-- `src/audit.py`：审计事件存储与回放过滤
+- `src/audit.py`：审计事件存储与回放过滤（支持 JSONL 持久化）
+- `src/unknown_terms.py`：未知术语解析与澄清建议
 - `src/identity.py`：单用户多角色上下文与角色选择
 - `tests/test_pipeline.py`：一致性、权限、方言、执行、审计与多角色行为测试
 
@@ -37,3 +38,4 @@ python3 -m unittest discover -s data_agent/tests -p 'test_*.py'
 - Unknown term 二次确认流程（向量检索/交互澄清）。
 - 指标版本化与生效窗。
 - 审计回放查询接口（trace_id/user_id/role/metric）。
+- 未知词二次确认流程桩（单候选自动解析/多候选澄清）。

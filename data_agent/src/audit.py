@@ -1,19 +1,37 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from pathlib import Path
+import json
 
 
 class AuditStore:
-    """In-memory audit replay store.
+    """In-memory audit replay store with optional JSONL persistence."""
 
-    Supports filtering by trace_id, user_id, role, metric.
-    """
-
-    def __init__(self, events: List[Dict[str, Any]] | None = None):
+    def __init__(self, events: List[Dict[str, Any]] | None = None, persist_path: str | None = None):
         self._events: List[Dict[str, Any]] = list(events or [])
+        self.persist_path = persist_path
+        if persist_path:
+            self._load_from_file()
+
+    def _load_from_file(self) -> None:
+        p = Path(self.persist_path)
+        if not p.exists():
+            return
+        for line in p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            self._events.append(json.loads(line))
 
     def append(self, event: Dict[str, Any]) -> None:
-        self._events.append(dict(event))
+        payload = dict(event)
+        self._events.append(payload)
+        if self.persist_path:
+            p = Path(self.persist_path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            with p.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
     def query(
         self,
