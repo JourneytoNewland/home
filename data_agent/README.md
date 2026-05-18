@@ -36,7 +36,6 @@ python3 -m unittest discover -s data_agent/tests -p 'test_*.py'
 
 ## 下一步建议升级
 - 接入真实 NL 服务（替换规则桩）。
-- Unknown term 二次确认流程（向量检索/交互澄清）。
-- 指标版本化与生效窗。
-- 审计回放查询接口（trace_id/user_id/role/metric）与分页/偏移。
-- 未知词二次确认流程桩（单候选自动解析/多候选澄清）。
+- 指标版本变更审批流与回滚策略。
+- 执行层接入真实 OLAP/OLTP 数据源连接池。
+- 审计回放 API 服务化（鉴权 + 分页 + 时间窗）。

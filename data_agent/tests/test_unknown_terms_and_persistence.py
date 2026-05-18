@@ -42,9 +42,16 @@ class TestUnknownTermsAndPersistence(unittest.TestCase):
         finally:
             os.remove(path)
 
+    def test_audit_replay_time_window(self):
+        logger = AuditLogger()
+        pipeline = DataAgentPipeline(self.semantic_db, audit_logger=logger)
+        out = pipeline.run("今年销售额", role="analyst")
 
-if __name__ == "__main__":
-    unittest.main()
+        logged_at = pipeline.audit_events()[-1]["logged_at"]
+        rows = pipeline.audit_replay(start_time=logged_at, end_time=logged_at)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["trace_id"], out["trace_id"])
+
 
 class TestAuditReplayPagination(unittest.TestCase):
     def test_replay_limit_offset(self):
@@ -59,3 +66,7 @@ class TestAuditReplayPagination(unittest.TestCase):
         self.assertEqual(len(first), 1)
         self.assertEqual(len(second), 1)
         self.assertNotEqual(first[0]["trace_id"], second[0]["trace_id"])
+
+
+if __name__ == "__main__":
+    unittest.main()
