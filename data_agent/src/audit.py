@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 from datetime import datetime
+from data_agent.src.errors import AuditQueryError
 from pathlib import Path
 import json
 
@@ -55,11 +56,22 @@ class AuditStore:
         if metric is not None:
             results = [e for e in results if e.get("metric") == metric]
         if start_time is not None:
-            st = datetime.fromisoformat(start_time)
+            try:
+                st = datetime.fromisoformat(start_time)
+            except ValueError as exc:
+                raise AuditQueryError(f"Invalid start_time format: {start_time}") from exc
             results = [e for e in results if "logged_at" in e and datetime.fromisoformat(e["logged_at"]) >= st]
         if end_time is not None:
-            et = datetime.fromisoformat(end_time)
+            try:
+                et = datetime.fromisoformat(end_time)
+            except ValueError as exc:
+                raise AuditQueryError(f"Invalid end_time format: {end_time}") from exc
             results = [e for e in results if "logged_at" in e and datetime.fromisoformat(e["logged_at"]) <= et]
+
+        if offset < 0:
+            raise AuditQueryError("offset must be >= 0")
+        if limit is not None and limit < 0:
+            raise AuditQueryError("limit must be >= 0")
 
         results = results[offset:]
         if limit is not None:

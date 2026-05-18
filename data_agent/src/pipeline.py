@@ -9,6 +9,7 @@ from data_agent.src.identity import UserContext
 from data_agent.src.validator import validate_logic_form
 from data_agent.src.unknown_terms import UnknownTermResolver
 from data_agent.src.nl_adapter import RuleBasedNLAdapter
+from data_agent.src.errors import NLAdapterError
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,8 @@ class DataAgentPipeline:
         user_context: UserContext | None = None,
     ) -> Dict[str, Any]:
         q = self.nl_standardizer.normalize(raw_question)
+        if not isinstance(q, QueryObject):
+            raise NLAdapterError(f"NL standardizer must return QueryObject, got {type(q)!r}")
         resolved_role = user_context.resolve_role(role) if user_context else (role or "analyst")
         enforce_metric_access(self.semantic_db, resolved_role, q.metric)
         lf = DeterministicReasoner.to_logic_form(q)

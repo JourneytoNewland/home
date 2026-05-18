@@ -17,6 +17,7 @@
 - `src/unknown_terms.py`：未知术语解析与澄清建议
 - `src/nl_adapter.py`：NL 适配器接口与默认规则实现
 - `src/identity.py`：单用户多角色上下文与角色选择
+- `src/errors.py`：统一错误类型（审计查询/NL适配器）
 - `tests/test_pipeline.py`：一致性、权限、方言、执行、审计与多角色行为测试
 
 ## 快速运行
@@ -33,6 +34,7 @@ python3 -m unittest discover -s data_agent/tests -p 'test_*.py'
 - 指标版本与生效窗选择（as_of_date 解析）。
 - 只读执行器与执行审计日志（trace_id 关联）。
 - 单用户多角色（active_role/requested_role）权限控制。
+- 输入参数校验（审计时间窗/分页参数、NL适配器返回类型）。
 
 ## 下一步建议升级
 - 接入真实 NL 服务（替换规则桩）。
