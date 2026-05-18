@@ -83,6 +83,7 @@ class DataAgentPipeline:
         execution = self.executor.execute(compiled["sql"])
 
         event = {
+            "user_id": user_context.user_id if user_context else None,
             "trace_id": compiled["trace_id"],
             "role": resolved_role,
             "metric": q.metric,
@@ -112,3 +113,16 @@ class DataAgentPipeline:
                 "metric_effective_to": metric_def.effective_to,
             },
         }
+
+
+    def audit_events(self) -> List[Dict[str, Any]]:
+        return self.audit_logger.list_events()
+
+    def audit_replay(
+        self,
+        trace_id: str | None = None,
+        user_id: str | None = None,
+        role: str | None = None,
+        metric: str | None = None,
+    ) -> List[Dict[str, Any]]:
+        return self.audit_logger.replay(trace_id=trace_id, user_id=user_id, role=role, metric=metric)

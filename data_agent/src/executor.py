@@ -5,9 +5,11 @@ from typing import Any, Dict, List
 from datetime import datetime, timezone
 import sqlite3
 
+from data_agent.src.audit import AuditStore
+
 
 class ExecutionError(RuntimeError):
-    pass
+    """Raised when query execution violates mode policy or backend constraints."""
 
 
 @dataclass
@@ -37,20 +39,28 @@ class QueryExecutor:
         try:
             cur = conn.cursor()
             cur.execute(sql)
-            rows = [dict(r) for r in cur.fetchall()]
-            return rows
+            return [dict(r) for r in cur.fetchall()]
         finally:
             conn.close()
 
 
 class AuditLogger:
-    def __init__(self):
-        self._events: List[Dict[str, Any]] = []
+    def __init__(self, store: AuditStore | None = None):
+        self.store = store or AuditStore()
 
     def log(self, event: Dict[str, Any]) -> None:
-        event = dict(event)
-        event["logged_at"] = datetime.now(timezone.utc).isoformat()
-        self._events.append(event)
+        payload = dict(event)
+        payload["logged_at"] = datetime.now(timezone.utc).isoformat()
+        self.store.append(payload)
 
     def list_events(self) -> List[Dict[str, Any]]:
-        return list(self._events)
+        return self.store.all()
+
+    def replay(
+        self,
+        trace_id: str | None = None,
+        user_id: str | None = None,
+        role: str | None = None,
+        metric: str | None = None,
+    ) -> List[Dict[str, Any]]:
+        return self.store.query(trace_id=trace_id, user_id=user_id, role=role, metric=metric)
