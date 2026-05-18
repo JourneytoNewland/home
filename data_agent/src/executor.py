@@ -62,5 +62,18 @@ class AuditLogger:
         user_id: str | None = None,
         role: str | None = None,
         metric: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> List[Dict[str, Any]]:
-        return self.store.query(trace_id=trace_id, user_id=user_id, role=role, metric=metric)
+        return self.store.query(
+            trace_id=trace_id,
+            user_id=user_id,
+            role=role,
+            metric=metric,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            offset=offset,
+        )

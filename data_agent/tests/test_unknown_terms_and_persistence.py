@@ -45,3 +45,17 @@ class TestUnknownTermsAndPersistence(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class TestAuditReplayPagination(unittest.TestCase):
+    def test_replay_limit_offset(self):
+        semantic_db = SemanticDB.from_file("data_agent/configs/semanticdb.sample.json")
+        logger = AuditLogger()
+        pipeline = DataAgentPipeline(semantic_db, audit_logger=logger)
+        pipeline.run("今年销售额", role="analyst")
+        pipeline.run("今年销售额按省份", role="analyst")
+
+        first = pipeline.audit_replay(limit=1, offset=0)
+        second = pipeline.audit_replay(limit=1, offset=1)
+        self.assertEqual(len(first), 1)
+        self.assertEqual(len(second), 1)
+        self.assertNotEqual(first[0]["trace_id"], second[0]["trace_id"])

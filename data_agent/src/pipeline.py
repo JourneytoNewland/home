@@ -8,6 +8,7 @@ from data_agent.src.semanticdb import SemanticDB
 from data_agent.src.identity import UserContext
 from data_agent.src.validator import validate_logic_form
 from data_agent.src.unknown_terms import UnknownTermResolver
+from data_agent.src.nl_adapter import RuleBasedNLAdapter
 
 
 @dataclass(frozen=True)
@@ -23,19 +24,11 @@ class QueryObject:
 
 
 class NLStandardizer:
-    @staticmethod
-    def normalize(raw_question: str) -> QueryObject:
-        text = raw_question.strip()
-        unknown_terms: List[str] = []
-        if "GMV" in text.upper():
-            unknown_terms.append("GMV")
+    def __init__(self, adapter):
+        self.adapter = adapter
 
-        if "利润" in text:
-            return QueryObject("sales_order", "profit_amount", "sum", "order_date", "2026-01-01", "2026-12-31", [], unknown_terms)
-        if "销售额" in text and "按省份" in text:
-            return QueryObject("sales_order", "sales_amount", "sum", "order_date", "2026-01-01", "2026-12-31", ["province"], unknown_terms)
-        return QueryObject("sales_order", "sales_amount", "sum", "order_date", "2026-01-01", "2026-12-31", [], unknown_terms)
-
+    def normalize(self, raw_question: str) -> QueryObject:
+        return self.adapter.normalize(raw_question)
 
 class DeterministicReasoner:
     @staticmethod
@@ -59,12 +52,14 @@ class DataAgentPipeline:
         executor: QueryExecutor | None = None,
         audit_logger: AuditLogger | None = None,
         unknown_term_resolver: UnknownTermResolver | None = None,
+        nl_standardizer: NLStandardizer | None = None,
     ):
         self.semantic_db = semantic_db
         self.compiler = compiler or GenericSQLCompiler()
         self.executor = executor or QueryExecutor(mode="dry_run")
         self.audit_logger = audit_logger or AuditLogger()
         self.unknown_term_resolver = unknown_term_resolver or UnknownTermResolver(vector_map={"GMV": ["sales_amount"]})
+        self.nl_standardizer = nl_standardizer or NLStandardizer(RuleBasedNLAdapter(QueryObject))
 
     def run(
         self,
@@ -72,7 +67,7 @@ class DataAgentPipeline:
         role: str | None = "analyst",
         user_context: UserContext | None = None,
     ) -> Dict[str, Any]:
-        q = NLStandardizer.normalize(raw_question)
+        q = self.nl_standardizer.normalize(raw_question)
         resolved_role = user_context.resolve_role(role) if user_context else (role or "analyst")
         enforce_metric_access(self.semantic_db, resolved_role, q.metric)
         lf = DeterministicReasoner.to_logic_form(q)
@@ -130,5 +125,18 @@ class DataAgentPipeline:
         user_id: str | None = None,
         role: str | None = None,
         metric: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
     ) -> List[Dict[str, Any]]:
-        return self.audit_logger.replay(trace_id=trace_id, user_id=user_id, role=role, metric=metric)
+        return self.audit_logger.replay(
+            trace_id=trace_id,
+            user_id=user_id,
+            role=role,
+            metric=metric,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            offset=offset,
+        )

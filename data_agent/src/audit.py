@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 from pathlib import Path
 import json
 
@@ -39,6 +40,10 @@ class AuditStore:
         user_id: Optional[str] = None,
         role: Optional[str] = None,
         metric: Optional[str] = None,
+        start_time: Optional[str] = None,
+        end_time: Optional[str] = None,
+        limit: Optional[int] = None,
+        offset: int = 0,
     ) -> List[Dict[str, Any]]:
         results = self._events
         if trace_id is not None:
@@ -49,6 +54,16 @@ class AuditStore:
             results = [e for e in results if e.get("role") == role]
         if metric is not None:
             results = [e for e in results if e.get("metric") == metric]
+        if start_time is not None:
+            st = datetime.fromisoformat(start_time)
+            results = [e for e in results if "logged_at" in e and datetime.fromisoformat(e["logged_at"]) >= st]
+        if end_time is not None:
+            et = datetime.fromisoformat(end_time)
+            results = [e for e in results if "logged_at" in e and datetime.fromisoformat(e["logged_at"]) <= et]
+
+        results = results[offset:]
+        if limit is not None:
+            results = results[:limit]
         return list(results)
 
     def all(self) -> List[Dict[str, Any]]:
