@@ -13,7 +13,8 @@
 - `src/compiler.py`：SQL 编译接口与多方言基础实现
 - `src/validator.py`：LogicForm 结构校验
 - `src/executor.py`：只读执行器（dry_run/sqlite_readonly）与审计日志
-- `tests/test_pipeline.py`：一致性、权限、方言、执行与审计行为测试
+- `src/identity.py`：单用户多角色上下文与角色选择
+- `tests/test_pipeline.py`：一致性、权限、方言、执行、审计与多角色行为测试
 
 ## 快速运行
 ```bash
@@ -28,6 +29,7 @@ python3 -m unittest discover -s data_agent/tests -p 'test_*.py'
 - Explain 输出补充（口径、时间窗、角色、行过滤、未知词）。
 - 指标版本与生效窗选择（as_of_date 解析）。
 - 只读执行器与执行审计日志（trace_id 关联）。
+- 单用户多角色（active_role/requested_role）权限控制。
 
 ## 下一步建议升级
 - 接入真实 NL 服务（替换规则桩）。

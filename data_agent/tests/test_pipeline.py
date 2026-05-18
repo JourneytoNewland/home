@@ -4,6 +4,7 @@ from data_agent.src.auth import AuthorizationError
 from data_agent.src.compiler import MySQLCompiler, PostgresCompiler
 from data_agent.src.executor import QueryExecutor, AuditLogger, ExecutionError
 from data_agent.src.pipeline import DataAgentPipeline
+from data_agent.src.identity import UserContext
 from data_agent.src.semanticdb import SemanticDB
 
 
@@ -72,6 +73,18 @@ class TestPipeline(unittest.TestCase):
         events = self.audit_logger.list_events()
         self.assertGreaterEqual(len(events), 1)
         self.assertEqual(events[-1]["trace_id"], out["trace_id"])
+
+    def test_single_user_multi_roles(self):
+        ctx = UserContext(user_id="owner_1", roles=["analyst", "admin"], active_role="admin")
+        out = self.pipeline.run("今年利润", role=None, user_context=ctx)
+        self.assertEqual(out["user_id"], "owner_1")
+        self.assertEqual(out["explain"]["role"], "admin")
+        self.assertIn("sum(profit_amount)", out["sql"])
+
+    def test_single_user_forced_ungranted_role_rejected(self):
+        ctx = UserContext(user_id="owner_1", roles=["analyst"], active_role="analyst")
+        with self.assertRaises(PermissionError):
+            self.pipeline.run("今年销售额", role="admin", user_context=ctx)
 
 
 if __name__ == "__main__":

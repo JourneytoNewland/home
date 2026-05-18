@@ -5,6 +5,7 @@ from data_agent.src.auth import enforce_metric_access
 from data_agent.src.compiler import GenericSQLCompiler, with_trace_id
 from data_agent.src.executor import QueryExecutor, AuditLogger
 from data_agent.src.semanticdb import SemanticDB
+from data_agent.src.identity import UserContext
 from data_agent.src.validator import validate_logic_form
 
 
@@ -62,14 +63,20 @@ class DataAgentPipeline:
         self.executor = executor or QueryExecutor(mode="dry_run")
         self.audit_logger = audit_logger or AuditLogger()
 
-    def run(self, raw_question: str, role: str = "analyst") -> Dict[str, Any]:
+    def run(
+        self,
+        raw_question: str,
+        role: str | None = "analyst",
+        user_context: UserContext | None = None,
+    ) -> Dict[str, Any]:
         q = NLStandardizer.normalize(raw_question)
-        enforce_metric_access(self.semantic_db, role, q.metric)
+        resolved_role = user_context.resolve_role(role) if user_context else (role or "analyst")
+        enforce_metric_access(self.semantic_db, resolved_role, q.metric)
         lf = DeterministicReasoner.to_logic_form(q)
 
         metric_def = self.semantic_db.metric(q.metric, as_of_date=q.end_date)
         table = self.semantic_db.table_for_subject(metric_def.subject)
-        row_filter = self.semantic_db.role_row_filter(role)
+        row_filter = self.semantic_db.role_row_filter(resolved_role)
 
         sql = self.compiler.compile(lf, table, metric_def.expression, row_filter)
         compiled = with_trace_id(sql, lf)
@@ -77,7 +84,7 @@ class DataAgentPipeline:
 
         event = {
             "trace_id": compiled["trace_id"],
-            "role": role,
+            "role": resolved_role,
             "metric": q.metric,
             "metric_version": metric_def.version,
             "sql": compiled["sql"],
@@ -87,6 +94,7 @@ class DataAgentPipeline:
         self.audit_logger.log(event)
 
         return {
+            "user_id": user_context.user_id if user_context else None,
             "query_object": asdict(q),
             "logic_form": lf,
             "trace_id": compiled["trace_id"],
@@ -96,7 +104,7 @@ class DataAgentPipeline:
                 "metric": q.metric,
                 "subject": q.subject,
                 "time_range": {"start": q.start_date, "end": q.end_date},
-                "role": role,
+                "role": resolved_role,
                 "row_filter": row_filter,
                 "unknown_terms": q.unknown_terms,
                 "metric_version": metric_def.version,
