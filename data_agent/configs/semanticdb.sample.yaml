@@ -1,0 +1,28 @@
+metrics:
+  - name: sales_amount
+    label: 销售额
+    aggregation: sum
+    expression: order_amount
+    subject: sales_order
+    version: v1
+entities:
+  - name: sales_order
+    table: dwd_sales_order
+    lifecycle:
+      open: created_at
+      close: closed_at
+relations:
+  - from: sales_order
+    to: store
+    type: many_to_one
+    join:
+      left_key: store_id
+      right_key: id
+policies:
+  default_deny: true
+  roles:
+    analyst:
+      allowed_metrics: [sales_amount]
+      row_filter: "region in ('East','North')"
+time_semantics:
+  fiscal_year_start_month: 1
