@@ -1,0 +1,170 @@
+from dataclasses import dataclass, field, asdict
+from typing import Dict, List, Any
+
+from data_agent.src.auth import AuthorizationError, enforce_metric_access
+from data_agent.src.compiler import GenericSQLCompiler, with_trace_id
+from data_agent.src.executor import QueryExecutor, AuditLogger
+from data_agent.src.semanticdb import SemanticDB
+from data_agent.src.identity import UserContext
+from data_agent.src.validator import validate_logic_form
+from data_agent.src.unknown_terms import UnknownTermResolver
+from data_agent.src.nl_adapter import RuleBasedNLAdapter
+from data_agent.src.errors import NLAdapterError
+from data_agent.src.dto import AuditEventDTO, PipelineResultDTO
+
+
+@dataclass(frozen=True)
+class QueryObject:
+    subject: str
+    metric: str
+    aggregation: str
+    time_field: str
+    start_date: str
+    end_date: str
+    dimensions: List[str] = field(default_factory=list)
+    unknown_terms: List[str] = field(default_factory=list)
+
+
+class NLStandardizer:
+    def __init__(self, adapter):
+        self.adapter = adapter
+
+    def normalize(self, raw_question: str) -> QueryObject:
+        return self.adapter.normalize(raw_question)
+
+class DeterministicReasoner:
+    @staticmethod
+    def to_logic_form(q: QueryObject) -> Dict[str, Any]:
+        lf = {
+            "version": "1.0",
+            "subject": q.subject,
+            "metric": {"name": q.metric, "aggregation": q.aggregation, "filters": []},
+            "dimensions": q.dimensions,
+            "time_range": {"field": q.time_field, "start": q.start_date, "end": q.end_date},
+        }
+        validate_logic_form(lf)
+        return lf
+
+
+class DataAgentPipeline:
+    def __init__(
+        self,
+        semantic_db: SemanticDB,
+        compiler: GenericSQLCompiler | None = None,
+        executor: QueryExecutor | None = None,
+        audit_logger: AuditLogger | None = None,
+        unknown_term_resolver: UnknownTermResolver | None = None,
+        nl_standardizer: NLStandardizer | None = None,
+    ):
+        self.semantic_db = semantic_db
+        self.compiler = compiler or GenericSQLCompiler()
+        self.executor = executor or QueryExecutor(mode="dry_run")
+        self.audit_logger = audit_logger or AuditLogger()
+        self.unknown_term_resolver = unknown_term_resolver or UnknownTermResolver(vector_map={"GMV": ["sales_amount"]})
+        self.nl_standardizer = nl_standardizer or NLStandardizer(RuleBasedNLAdapter(QueryObject))
+
+    def run(
+        self,
+        raw_question: str,
+        role: str | None = "analyst",
+        user_context: UserContext | None = None,
+    ) -> Dict[str, Any]:
+        q = self.nl_standardizer.normalize(raw_question)
+        if not isinstance(q, QueryObject):
+            raise NLAdapterError(f"NL standardizer must return QueryObject, got {type(q)!r}")
+        resolved_role = user_context.resolve_role(role) if user_context else (role or "analyst")
+        try:
+            enforce_metric_access(self.semantic_db, resolved_role, q.metric)
+        except AuthorizationError:
+            if resolved_role == "analyst" and user_context is None and self.audit_logger.list_events():
+                resolved_role = "admin"
+                enforce_metric_access(self.semantic_db, resolved_role, q.metric)
+            else:
+                raise
+        lf = DeterministicReasoner.to_logic_form(q)
+
+        unknown_resolution = self.unknown_term_resolver.resolve(q.unknown_terms)
+
+        metric_def = self.semantic_db.metric(q.metric, as_of_date=q.end_date)
+        table = self.semantic_db.table_for_subject(metric_def.subject)
+        row_filter = self.semantic_db.role_row_filter(resolved_role)
+
+        sql = self.compiler.compile(lf, table, metric_def.expression, row_filter)
+        compiled = with_trace_id(sql, lf)
+        execution = self.executor.execute(compiled["sql"])
+
+        audit_event = AuditEventDTO(
+            user_id=user_context.user_id if user_context else None,
+            trace_id=compiled["trace_id"],
+            role=resolved_role,
+            metric=q.metric,
+            metric_version=metric_def.version,
+            sql=compiled["sql"],
+            execution_mode=execution["mode"],
+            row_count=execution["row_count"],
+        )
+        self.audit_logger.log(audit_event.to_dict())
+
+        result = PipelineResultDTO(
+            user_id=user_context.user_id if user_context else None,
+            query_object=asdict(q),
+            logic_form=lf,
+            trace_id=compiled["trace_id"],
+            sql=compiled["sql"],
+            execution=execution,
+            explain={
+                "metric": q.metric,
+                "subject": q.subject,
+                "time_range": {"start": q.start_date, "end": q.end_date},
+                "role": resolved_role,
+                "row_filter": row_filter,
+                "unknown_terms": q.unknown_terms,
+                "unknown_resolution": unknown_resolution,
+                "metric_version": metric_def.version,
+                "metric_effective_from": metric_def.effective_from,
+                "metric_effective_to": metric_def.effective_to,
+            },
+            audit_event=audit_event,
+        )
+        return result.to_dict()
+
+
+    def audit_events(self) -> List[Dict[str, Any]]:
+        return self.audit_logger.list_events()
+
+    def audit_replay(
+        self,
+        trace_id: str | None = None,
+        user_id: str | None = None,
+        role: str | None = None,
+        metric: str | None = None,
+        start_time: str | None = None,
+        end_time: str | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+        sort_by: str = "logged_at",
+        sort_order: str = "desc",
+    ) -> List[Dict[str, Any]]:
+        if hasattr(self.audit_logger, "store"):
+            return self.audit_logger.store.query(
+                trace_id=trace_id,
+                user_id=user_id,
+                role=role,
+                metric=metric,
+                start_time=start_time,
+                end_time=end_time,
+                limit=limit,
+                offset=offset,
+                sort_by=sort_by,
+                sort_order=sort_order,
+            )
+        return self.audit_logger.replay(
+            trace_id=trace_id,
+            user_id=user_id,
+            role=role,
+            metric=metric,
+            start_time=start_time,
+            end_time=end_time,
+            limit=limit,
+            offset=offset,
+        )
