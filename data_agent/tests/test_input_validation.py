@@ -35,6 +35,12 @@ class TestInputValidation(unittest.TestCase):
         with self.assertRaises(AuditQueryError):
             store.query(limit=-2)
 
+
+    def test_audit_invalid_sort_order_param(self):
+        store = AuditStore()
+        with self.assertRaises(AuditQueryError):
+            store.query(sort_order="INVALID")
+
     def test_nl_adapter_invalid_payload(self):
         pipeline = DataAgentPipeline(self.semantic_db, nl_standardizer=BadNLStandardizer())
         with self.assertRaises(NLAdapterError):

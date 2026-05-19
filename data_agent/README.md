@@ -18,7 +18,7 @@
 - `src/nl_adapter.py`：NL 适配器接口与默认规则实现
 - `src/identity.py`：单用户多角色上下文与角色选择
 - `src/errors.py`：统一错误类型（审计查询/NL适配器）
-- `tests/test_pipeline.py`：一致性、权限、方言、执行、审计与多角色行为测试
+- `tests/`：覆盖一致性、权限、方言、执行、审计回放、输入校验与多角色行为
 
 ## 快速运行
 ```bash
@@ -41,3 +41,9 @@ python3 -m unittest discover -s data_agent/tests -p 'test_*.py'
 - 指标版本变更审批流与回滚策略。
 - 执行层接入真实 OLAP/OLTP 数据源连接池。
 - 审计回放 API 服务化（鉴权 + 分页 + 时间窗）。
+
+
+## 审计排序与 DTO 输出兼容
+- 审计回放结果保持统一 DTO 结构（如 `trace_id`、`role`、`metric`、`logged_at` 等字段），便于上层 API 直接透传。
+- 当需要按时间排序展示时，推荐基于 `logged_at` 做显式 asc/desc 排序，排序后 DTO 字段保持不变。
+- 分页（`limit`/`offset`）应在确定排序顺序后应用，以保证回放页面稳定性。

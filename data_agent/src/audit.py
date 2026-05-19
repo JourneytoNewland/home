@@ -45,6 +45,8 @@ class AuditStore:
         end_time: Optional[str] = None,
         limit: Optional[int] = None,
         offset: int = 0,
+        sort_by: str = "logged_at",
+        sort_order: str = "desc",
     ) -> List[Dict[str, Any]]:
         results = self._events
         if trace_id is not None:
@@ -72,6 +74,25 @@ class AuditStore:
             raise AuditQueryError("offset must be >= 0")
         if limit is not None and limit < 0:
             raise AuditQueryError("limit must be >= 0")
+
+
+        if sort_by != "logged_at":
+            raise AuditQueryError("sort_by must be 'logged_at'")
+        if sort_order not in {"asc", "desc"}:
+            raise AuditQueryError("sort_order must be 'asc' or 'desc'")
+
+        reverse = sort_order == "desc"
+
+        def _sort_key(event: Dict[str, Any]) -> datetime:
+            value = event.get("logged_at")
+            if value is None:
+                return datetime.min
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                return datetime.min
+
+        results = sorted(results, key=_sort_key, reverse=reverse)
 
         results = results[offset:]
         if limit is not None:

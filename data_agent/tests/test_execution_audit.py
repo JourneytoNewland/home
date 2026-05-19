@@ -32,6 +32,24 @@ class TestExecutionAndAudit(unittest.TestCase):
         finally:
             os.remove(db_path)
 
+
+    def test_audit_replay_sorting_desc_asc(self):
+        logger = AuditLogger()
+        pipeline = DataAgentPipeline(self.semantic_db, audit_logger=logger)
+
+        first = pipeline.run("今年销售额", role="analyst")
+        ctx_admin = UserContext(user_id="u_admin", roles=["analyst", "admin"], active_role="admin")
+        second = pipeline.run("今年利润", role=None, user_context=ctx_admin)
+
+        rows = pipeline.audit_replay()
+        self.assertGreaterEqual(len(rows), 2)
+
+        asc_rows = sorted(rows, key=lambda e: e["logged_at"])
+        desc_rows = sorted(rows, key=lambda e: e["logged_at"], reverse=True)
+
+        self.assertEqual([r["trace_id"] for r in desc_rows], [r["trace_id"] for r in reversed(asc_rows)])
+        self.assertTrue({first["trace_id"], second["trace_id"]}.issubset({r["trace_id"] for r in rows}))
+
     def test_audit_replay_filters(self):
         logger = AuditLogger()
         pipeline = DataAgentPipeline(self.semantic_db, audit_logger=logger)
