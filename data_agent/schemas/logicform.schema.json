@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/logicform.schema.json",
+  "title": "LogicFormV1",
+  "type": "object",
+  "required": ["version", "subject", "metric", "time_range"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "subject": { "type": "string", "minLength": 1 },
+    "metric": {
+      "type": "object",
+      "required": ["name", "aggregation"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "aggregation": { "type": "string", "enum": ["sum", "count", "avg", "max", "min"] },
+        "filters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["field", "op", "value"],
+            "properties": {
+              "field": { "type": "string" },
+              "op": { "type": "string", "enum": ["=", "!=", ">", ">=", "<", "<=", "in"] },
+              "value": {}
+            }
+          }
+        }
+      }
+    },
+    "dimensions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "time_range": {
+      "type": "object",
+      "required": ["field", "start", "end"],
+      "properties": {
+        "field": { "type": "string" },
+        "start": { "type": "string", "format": "date" },
+        "end": { "type": "string", "format": "date" }
+      }
+    },
+    "topn": {
+      "type": "object",
+      "required": ["by", "n"],
+      "properties": {
+        "by": { "type": "string" },
+        "n": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

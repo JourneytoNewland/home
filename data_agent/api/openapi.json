@@ -1,0 +1,40 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "Data Agent API", "version": "0.1.0"},
+  "paths": {
+    "/query": {
+      "post": {
+        "summary": "Run NL query",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "question": {"type": "string"},
+                  "role": {"type": "string", "enum": ["analyst", "admin"]}
+                },
+                "required": ["question"]
+              }
+            }
+          }
+        },
+        "responses": {"200": {"description": "OK"}}
+      }
+    },
+    "/replay": {
+      "get": {
+        "summary": "Replay audit events",
+        "parameters": [
+          {"name": "actor_role", "in": "query", "schema": {"type": "string"}},
+          {"name": "sort_order", "in": "query", "schema": {"type": "string", "enum": ["asc", "desc"]}},
+          {"name": "limit", "in": "query", "schema": {"type": "integer"}},
+          {"name": "offset", "in": "query", "schema": {"type": "integer"}},
+          {"name": "trace_id", "in": "query", "schema": {"type": "string"}}
+        ],
+        "responses": {"200": {"description": "OK"}}
+      }
+    }
+  }
+}

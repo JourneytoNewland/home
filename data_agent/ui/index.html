@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>Data Agent Console</title>
+  <style>
+    :root {
+      --bg:#060b1a;
+      --card:#0f1833;
+      --card2:#121f45;
+      --muted:#94a3b8;
+      --text:#e5e7eb;
+      --accent:#38bdf8;
+      --ok:#34d399;
+      --warn:#f59e0b;
+      --line:#2b3a67;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      margin: 20px;
+      background: radial-gradient(circle at 10% 10%, #16234b 0%, var(--bg) 45%);
+      color: var(--text);
+    }
+    .hero { margin-bottom: 14px; }
+    .hero h1 { margin: 0 0 8px 0; letter-spacing: .3px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+    .card {
+      background: linear-gradient(150deg, var(--card), var(--card2));
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid #26355f;
+      box-shadow: 0 8px 20px rgba(5, 10, 26, .35);
+    }
+    .title { margin: 0 0 8px 0; font-size: 18px; }
+    input, select, button, textarea {
+      width: 100%; margin-top: 8px; padding: 10px; border-radius: 8px;
+      border: 1px solid #334155; background: #0f172a; color: var(--text);
+    }
+    button { cursor: pointer; background: linear-gradient(90deg, #0ea5e9, #2563eb); border: none; }
+    button[disabled] { opacity: .5; cursor:not-allowed; }
+    pre { white-space: pre-wrap; background: #020617; padding: 12px; border-radius: 8px; max-height: 320px; overflow:auto; }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .chip { border:1px solid #334155; border-radius:20px; padding:6px 10px; cursor:pointer; font-size:12px; }
+    .chip:hover { border-color: var(--accent); color: #dbeafe; }
+    .kpi { display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
+    .kpi .box { background:#0f172a; border-radius:10px; padding:10px; border: 1px solid #1f2a44; }
+    .feature-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top: 8px; }
+    .feature { padding: 10px; border:1px solid var(--line); border-radius: 10px; background:#0b132b; }
+    .vision-grid { display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-top:8px; }
+    .vision { padding:10px; border:1px dashed #3a4d7f; border-radius:10px; background:#0b132b; }
+    .vision b { color:#93c5fd; }
+    .scene { margin-top: 8px; border-left: 2px solid var(--line); padding-left: 10px; }
+    .scene b { color: #bae6fd; }
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    @media (max-width: 980px){ .grid, .feature-grid, .vision-grid, .kpi { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>Data Agent 多角色控制台</h1>
+    <div class="sub">以 <span class="ok">可解释问数</span> + <span class="ok">可审计回放</span> 作为核心体验：让分析、治理、审计在一个界面内闭环。</div>
+  </div>
+
+  <div class="kpi card">
+    <div class="box"><div class="sub">当前角色</div><div id="kpiRole">analyst</div></div>
+    <div class="box"><div class="sub">最近 trace_id</div><div id="kpiTrace">-</div></div>
+    <div class="box"><div class="sub">回放条数</div><div id="kpiReplay">0</div></div>
+  </div>
+
+  <div class="card" style="margin-top: 12px;">
+    <h3 class="title">功能清单审订（作用 + 场景）</h3>
+    <div class="sub">以下能力板用于快速检查：功能是否齐全、每项能力的作用是什么、在何种场景使用。</div>
+    <div id="capabilityBoard" class="feature-grid"></div>
+  </div>
+
+
+  <div class="card" style="margin-top: 12px;">
+    <h3 class="title">未来五年精品化扩展评估（客户/专业/专家/AI）</h3>
+    <div class="sub">用于审订该界面是否具备长期竞争力：不仅能演示，更能承载企业级演进。</div>
+    <div id="futureBoard" class="vision-grid"></div>
+  </div>
+
+  <div class="grid" style="margin-top: 12px;">
+    <div class="card">
+      <h3 class="title">1) 智能问数</h3>
+      <div class="sub">给业务角色准备常用问题模板，也支持自由输入。</div>
+      <label>用户角色</label>
+      <select id="role" onchange="applyPersona()">
+        <option value="analyst">analyst（分析师）</option>
+        <option value="admin">admin（管理员）</option>
+      </select>
+      <label>问题</label>
+      <input id="q" value="今年销售额按省份" />
+      <div class="chips">
+        <div class="chip" onclick="setQ('今年销售额按省份')">销售额分省</div>
+        <div class="chip" onclick="setQ('今年销售额')">销售额汇总</div>
+        <div class="chip" onclick="setQ('今年利润')">利润汇总</div>
+        <div class="chip" onclick="setQ('今年GMV销售额')">GMV澄清</div>
+      </div>
+      <button onclick="runQuery()">执行问数</button>
+      <div id="resultCards"></div><pre id="resultRaw" style="display:none"></pre>
+    </div>
+
+    <div class="card">
+      <h3 class="title">2) 审计回放（治理/审计）</h3>
+      <div class="sub">支持角色、排序、分页。管理员可查看完整SQL，分析师默认脱敏。</div>
+      <label>回放角色上下文</label>
+      <select id="replayRole">
+        <option value="admin">admin</option>
+        <option value="analyst">analyst</option>
+      </select>
+      <label>排序</label>
+      <select id="sortOrder"><option value="desc">desc</option><option value="asc">asc</option></select>
+      <label>limit</label>
+      <input id="limit" value="20" />
+      <label>trace_id筛选</label>
+      <input id="traceFilter" value="" placeholder="可选：按trace_id过滤" />
+      <button onclick="loadReplay()">加载回放</button>
+      <div id="filterSummary" class="sub"></div>
+      <div class="chips">
+        <button id="btnPrev" onclick="prevPage()">上一页</button>
+        <button id="btnNext" onclick="nextPage()">下一页</button>
+      </div>
+      <div id="pageInfo" class="sub"></div>
+      <div id="replayList"></div><pre id="replayRaw" style="display:none"></pre>
+    </div>
+  </div>
+
+<script>
+
+const futureReadinessChecklist = [
+  { name:'客户视角：可用性', detail:'统一入口、模板化问数、偏好记忆降低学习成本，适合高频业务用户。' },
+  { name:'专业人员视角：治理性', detail:'角色控制、回放过滤、trace追踪让分析结果可解释、可复核。' },
+  { name:'DataAgent专家视角：可扩展性', detail:'能力板数据驱动渲染，易扩展插件位（新角色/新指标/新审计维度）。' },
+  { name:'AI发展视角：前瞻性', detail:'为后续接入多Agent编排、RAG术语澄清、自动评测闭环预留结构。' }
+];
+
+const capabilityChecklist = [
+  { name:'NL2LF2SQL 问数链路', effect:'把自然语言稳定转换为可执行 SQL。', scene:'业务分析师日常看板、临时分析。' },
+  { name:'多角色权限控制', effect:'按角色收敛字段、SQL 可见范围与操作能力。', scene:'管理员全量排查、分析师按权访问。' },
+  { name:'审计回放与追踪', effect:'以 trace_id 串联问数-执行-结果，支持复盘。', scene:'审计核查、质量复盘、问题定位。' },
+  { name:'排序/分页/过滤', effect:'保障回放浏览稳定，快速定位目标事件。', scene:'大规模历史日志查询。' },
+  { name:'未知术语澄清', effect:'发现歧义词并提示澄清，降低错误口径。', scene:'跨团队口径不一致场景。' },
+  { name:'本地偏好记忆', effect:'保存角色与筛选条件，提升连续操作效率。', scene:'固定岗位的高频使用。' }
+];
+
+let replayOffset = 0;
+let replayLimit = 20;
+let replayNextOffset = null;
+function setQ(v){ document.getElementById('q').value=v; }
+function applyPersona(){
+  const role = document.getElementById('role').value;
+  document.getElementById('kpiRole').textContent = role;
+  if(role==='analyst') document.getElementById('q').value='今年销售额按省份';
+  if(role==='admin') document.getElementById('q').value='今年利润';
+}
+function renderFutureBoard(){
+  const html = futureReadinessChecklist.map(item => `<div class=\"vision\"><b>${item.name}</b><div class=\"sub\" style=\"margin-top:8px;\">${item.detail}</div></div>`).join('');
+  document.getElementById('futureBoard').innerHTML = html;
+}
+
+function renderCapabilityBoard(){
+  const html = capabilityChecklist.map(item => `<div class="feature"><b>${item.name}</b><div class="scene sub"><b>作用：</b>${item.effect}<br/><b>场景：</b>${item.scene}</div></div>`).join('');
+  document.getElementById('capabilityBoard').innerHTML = html;
+}
+
+function card(title, value){ return `<div class="box"><div class="sub">${title}</div><div>${value}</div></div>`; }
+function renderResult(data){
+  const r=data?.result||{};
+  const explain=r.explain||{};
+  const html=`<div class="kpi">
+    ${card('trace_id', r.trace_id||'-')}
+    ${card('metric', explain.metric||'-')}
+    ${card('role', explain.role||'-')}
+    ${card('time_range', (explain.time_range?.start||'-')+' ~ '+(explain.time_range?.end||'-'))}
+    ${card('sql(可复制)', `<button onclick="copyText(${JSON.stringify((r.sql||'').replace(/"/g,'&quot;'))})">复制SQL</button>`)}
+  </div>`;
+  document.getElementById('resultCards').innerHTML=html;
+  document.getElementById('resultRaw').textContent=JSON.stringify(data,null,2);
+}
+function renderReplay(data){
+  const items=data?.items||[];
+  document.getElementById('kpiReplay').textContent=String(data?.total??0);
+  const rows=items.map(it=>`<div class="box">
+    <div><b>${it.trace_id}</b> <span class="sub">${it.role}/${it.metric}</span></div>
+    <div class="sub">${it.logged_at||''}</div>
+    <div><button onclick="copyText(${JSON.stringify((it.sql||'').replace(/"/g,'&quot;'))})">复制SQL</button></div>
+    <pre>${(it.sql||'')}</pre>
+  </div>`).join('');
+  document.getElementById('replayList').innerHTML=`<div class="kpi">${rows||'<div class="sub warn">无数据</div>'}</div>`;
+  bindReplayRowClicks(items);
+  document.getElementById('replayRaw').textContent=JSON.stringify(data,null,2);
+  replayNextOffset = data?.next_offset ?? null;
+  const page = Math.floor(replayOffset / Math.max(1,replayLimit)) + 1;
+  const total = data?.total ?? 0;
+  document.getElementById('pageInfo').textContent = `第 ${page} 页 · total=${total}`;
+  document.getElementById('btnPrev').disabled = replayOffset <= 0;
+  document.getElementById('btnNext').disabled = replayNextOffset === null;
+}
+function copyText(t){ navigator.clipboard.writeText(t); }
+function bindReplayRowClicks(items){
+  const boxes=document.querySelectorAll('#replayList .box');
+  boxes.forEach((b,idx)=>{ b.style.cursor='pointer'; b.onclick=()=>showDetail(items[idx]); });
+}
+function showDetail(item){
+  const panel=document.getElementById('detailPanel');
+  if(!panel) return;
+  panel.style.display='block';
+  document.getElementById('detailBody').textContent=JSON.stringify(item,null,2);
+}
+function closeDetail(){ const panel=document.getElementById('detailPanel'); if(panel) panel.style.display='none'; }
+
+function savePrefs(){
+  const prefs={
+    role: document.getElementById('role').value,
+    replayRole: document.getElementById('replayRole').value,
+    sortOrder: document.getElementById('sortOrder').value,
+    limit: document.getElementById('limit').value,
+    traceFilter: document.getElementById('traceFilter').value,
+    q: document.getElementById('q').value,
+  };
+  localStorage.setItem('da_prefs', JSON.stringify(prefs));
+}
+function loadPrefs(){
+  try{
+    const raw=localStorage.getItem('da_prefs');
+    if(!raw) return;
+    const p=JSON.parse(raw);
+    if(p.role) document.getElementById('role').value=p.role;
+    if(p.replayRole) document.getElementById('replayRole').value=p.replayRole;
+    if(p.sortOrder) document.getElementById('sortOrder').value=p.sortOrder;
+    if(p.limit) document.getElementById('limit').value=p.limit;
+    if(p.traceFilter!==undefined) document.getElementById('traceFilter').value=p.traceFilter;
+    if(p.q) document.getElementById('q').value=p.q;
+    applyPersona();
+  }catch(e){}
+}
+window.addEventListener('DOMContentLoaded',()=>{
+  renderFutureBoard();
+  renderCapabilityBoard();
+  loadPrefs();
+  ['role','replayRole','sortOrder','limit','traceFilter','q'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('change', savePrefs);
+  });
+});
+
+async function runQuery(){
+  const question=document.getElementById('q').value;
+  const role=document.getElementById('role').value;
+  savePrefs();
+  const r=await fetch('/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,role})});
+  const data=await r.json();
+  renderResult(data);
+  if(data?.result?.trace_id) document.getElementById('kpiTrace').textContent=data.result.trace_id;
+}
+async function loadReplay(){
+  const actorRole=document.getElementById('replayRole').value;
+  const sortOrder=document.getElementById('sortOrder').value;
+  const limit=Number(document.getElementById('limit').value||20);
+  replayLimit = limit;
+  const traceId=document.getElementById('traceFilter').value;
+  const params=new URLSearchParams({actor_role:actorRole,sort_order:sortOrder,limit:String(limit),offset:String(replayOffset)});
+  if(traceId) params.set('trace_id', traceId);
+  savePrefs();
+  const r=await fetch('/replay?'+params.toString());
+  const data=await r.json();
+  renderReplay(data);
+  document.getElementById('filterSummary').textContent = `role=${actorRole}, sort=${sortOrder}, limit=${limit}, offset=${replayOffset}, trace=${traceId||'-'}`;
+}
+
+function nextPage(){ if(replayNextOffset===null) return; replayOffset = replayNextOffset; loadReplay(); }
+function prevPage(){ replayOffset = Math.max(0, replayOffset - replayLimit); loadReplay(); }
+</script>
+</body>
+</html>
