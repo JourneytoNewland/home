@@ -1,0 +1,53 @@
+{
+  "metrics": [
+    {
+      "name": "sales_amount",
+      "label": "销售额",
+      "aggregation": "sum",
+      "expression": "order_amount",
+      "subject": "sales_order",
+      "version": "v1",
+      "effective_from": "2025-01-01",
+      "effective_to": "2026-06-30"
+    },
+    {
+      "name": "sales_amount",
+      "label": "销售额",
+      "aggregation": "sum",
+      "expression": "order_amount - discount_amount",
+      "subject": "sales_order",
+      "version": "v2",
+      "effective_from": "2026-07-01",
+      "effective_to": null
+    },
+    {
+      "name": "profit_amount",
+      "label": "利润额",
+      "aggregation": "sum",
+      "expression": "profit_amount",
+      "subject": "sales_order",
+      "version": "v1",
+      "effective_from": "2025-01-01",
+      "effective_to": null
+    }
+  ],
+  "entities": [
+    {
+      "name": "sales_order",
+      "table": "dwd_sales_order",
+      "lifecycle": {"open": "created_at", "close": "closed_at"}
+    }
+  ],
+  "policies": {
+    "default_deny": true,
+    "roles": {
+      "analyst": {
+        "allowed_metrics": ["sales_amount"],
+        "row_filter": "region in ('East','North')"
+      },
+      "admin": {
+        "allowed_metrics": ["sales_amount", "profit_amount"]
+      }
+    }
+  }
+}
