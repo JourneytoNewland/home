@@ -1,156 +1,72 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" >
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataBuddy DEMO（独立版）</title>
+  <style>
+    :root{--bg:#0a1224;--card:#121f3a;--line:#2a406d;--txt:#e9f1ff;--sub:#9db2db;--brand:#64a9ff;--done:#21c36d}
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,"PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at top,#19325d,#0a1224 45%);color:var(--txt)}
+    .app{max-width:1100px;margin:0 auto;padding:28px 16px 40px}
+    h1{margin:0 0 8px;font-size:36px}.desc{margin:0;color:var(--sub);line-height:1.7}
+    .card{background:rgba(18,31,58,.9);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:14px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{padding:8px 12px;border-radius:10px;border:1px solid #3c5d97;background:#203760;color:#dce9ff;cursor:pointer}.tab.active{background:var(--brand);color:#071427;border-color:var(--brand);font-weight:700}
+    .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:14px}
+    .chat{height:420px;overflow:auto;background:#0c172e;border:1px solid #28406e;border-radius:10px;padding:10px}
+    .msg{padding:9px 11px;border-radius:9px;margin:8px 0;line-height:1.6}.u{background:#24426f}.a{background:#182c4d}
+    .steps li{list-style:none;margin:8px 0;padding:10px;border-radius:10px;border:1px solid #2a406d;background:#0d1a34}.steps li.done{border-color:#2d9960;background:#112f23;color:#ddffe9}
+    .btn{padding:9px 14px;border-radius:10px;border:1px solid #3c5d97;background:#203760;color:#fff;cursor:pointer}
+    .kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.kpi .item{background:#0c172e;border:1px solid #2a406d;border-radius:10px;padding:10px}.num{font-size:24px;font-weight:700}
+    @media (max-width:920px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>DataBuddy：一句话完成数据全链路</h1>
+    <p class="desc">独立 DEMO：仅保留核心交互。用户提出目标后，Agent 自动完成数据接入、开发、治理、分析，并输出可审计交付结果。</p>
 
-<title>蝴蝶之吻</title>
-<meta name="description" content="遇事从容而有余味，为人从容而有余年。">
+    <section class="card">
+      <div class="tabs" id="tabs"></div>
+    </section>
 
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-
-<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
-<link rel="shortcut icon" href="https://journeytonewland.github.io/home/favicon.ico?v=1555853660716">
-<link rel="stylesheet" href="https://journeytonewland.github.io/home/styles/main.css">
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
-<script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
-
-<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
-
-
-
-  </head>
-  <body>
-    <div id="app" class="main">
-
-      <div class="sidebar" :class="{ 'full-height': menuVisible }">
-  <div class="top-container" data-aos="fade-right">
-    <div class="top-header-container">
-      <a class="site-title-container" href="https://journeytonewland.github.io/home">
-        <img src="https://journeytonewland.github.io/home/images/avatar.png?v=1555853660716" class="site-logo">
-        <h1 class="site-title">蝴蝶之吻</h1>
-      </a>
-      <div class="menu-btn" @click="menuVisible = !menuVisible">
-        <div class="line"></div>
+    <section class="card grid">
+      <div>
+        <h3>对话执行台</h3>
+        <div class="chat" id="chat"></div>
+        <button class="btn" id="run">运行完整流程</button>
       </div>
-    </div>
-    <div>
-      
-        
-          <a href="/" class="site-nav">
-            首页
-          </a>
-        
-      
-        
-          <a href="/archives" class="site-nav">
-            归档
-          </a>
-        
-      
-        
-          <a href="/tags" class="site-nav">
-            标签
-          </a>
-        
-      
-        
-          <a href="/post/about" class="site-nav">
-            关于
-          </a>
-        
-      
-    </div>
-  </div>
-  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
-    <div class="social-container">
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    </div>
-    <div class="site-description">
-      遇事从容而有余味，为人从容而有余年。
-    </div>
-    <div class="site-footer">
-      曾因酒醉鞭名马，生怕情多慢美人。Powered by Gridea
-    </div>
-  </div>
-</div>
-
-
-      <div class="main-container">
-        <div class="content-container" data-aos="fade-up">
-          
-            <article class="post-item">
-              <div class="left">
-                <a href="https://journeytonewland.github.io/home/post/yi-xie-ge-ren-gan-jue-huan-bu-cuo-de-zi-xun-yuan">
-                  <h2 class="post-title">一些个人感觉还不错的资讯源</h2>
-                </a>
-                <div class="post-date">
-                  2019-01-25
-                </div>
-                <div class="post-abstract">
-                  
-                </div>
-              </div>
-              
-            </article>
-          
-            <article class="post-item">
-              <div class="left">
-                <a href="https://journeytonewland.github.io/home/post/ge-lu-fu-gei-jing-li-ren-de-di-yi-ke">
-                  <h2 class="post-title">格鲁夫给经理人的第一课</h2>
-                </a>
-                <div class="post-date">
-                  2018-12-12
-                </div>
-                <div class="post-abstract">
-                  <p>也许都要重新上一下的一节课。</p>
-
-                </div>
-              </div>
-              
-            </article>
-          
-
-          <div class="pagination-container">
-  
-  
-</div>
-
-        </div>
+      <div>
+        <h3>任务状态</h3>
+        <ul class="steps" id="steps"></ul>
+        <h3>交付指标</h3>
+        <div class="kpi" id="kpi"></div>
       </div>
-    </div>
+    </section>
+  </main>
 
-    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
-
-<script type="application/javascript">
-
-AOS.init();
-
-hljs.initHighlightingOnLoad()
-
-var app = new Vue({
-  el: '#app',
-  data: {
-    menuVisible: false,
-  },
-})
-
+<script>
+const scenes=[
+ {name:'数据分析',q:'分析上周GMV下滑原因并生成看板。',steps:['绑定统一语义层','自动生成查询计划并执行','归因分析与异常解释','生成简报与可视化看板'],kpi:[['答案一致性','100%'],['交付耗时','7分钟'],['人工操作','0次'],['产出','报告+看板']]},
+ {name:'数据治理',q:'巡检质量、安全、血缘问题，低风险自动修复。',steps:['自动巡检五大域','根因诊断与修复方案','低风险自动修复','高风险待审批执行'],kpi:[['发现问题','86项'],['自动修复','63项'],['待审批','7项'],['耗时','52分钟']]},
+ {name:'数据工程',q:'接入MySQL销售库并每天8点增量同步GMV与复购率。',steps:['扫描源表并评估接入','生成分层模型与目标表','自动生成ETL与调度流','发布并开启监控告警'],kpi:[['接入表数','24'],['生成任务','18个'],['调度频率','每日08:00'],['建仓周期','小时级']]}
+];
+let cur=0;
+const tabs=document.getElementById('tabs'),chat=document.getElementById('chat'),steps=document.getElementById('steps'),kpi=document.getElementById('kpi');
+function render(){
+  tabs.innerHTML=scenes.map((s,i)=>`<button class="tab ${i===cur?'active':''}" onclick="pick(${i})">${s.name}</button>`).join('');
+  chat.innerHTML=`<div class='msg u'>用户：${scenes[cur].q}</div><div class='msg a'>DataBuddy：目标收到，开始自动拆解任务并在权限边界内执行，全程保留审计日志。</div>`;
+  steps.innerHTML=scenes[cur].steps.map(x=>`<li>${x}</li>`).join('');
+  kpi.innerHTML=scenes[cur].kpi.map(([k,v])=>`<div class='item'><div>${k}</div><div class='num'>${v}</div></div>`).join('');
+}
+window.pick=(i)=>{cur=i;render();}
+document.getElementById('run').onclick=()=>{
+  const list=[...steps.children];let i=0;
+  const t=setInterval(()=>{
+    if(i<list.length){list[i].classList.add('done');chat.innerHTML+=`<div class='msg a'>[执行完成] ${scenes[cur].steps[i]}</div>`;chat.scrollTop=chat.scrollHeight;i++;}
+    else{clearInterval(t);chat.innerHTML+=`<div class='msg a'>✅ 全链路交付完成：代码、工作流、报告、审计记录已归档。</div>`;chat.scrollTop=chat.scrollHeight;}
+  },650)
+}
+render();
 </script>
-
-
-
-
-  </body>
+</body>
 </html>
